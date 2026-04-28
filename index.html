@@ -963,6 +963,63 @@ function renderModelMsg(parts, model) {
     </div>
   `);
   scrollBottom();
+
+  // Auto-save all generated images
+  const allSrcs = [
+    ...imgParts.map(img => ({ data: img.data, mime: img.mime, isBase64: true })),
+    ...urlImgSrcs.map(url  => ({ url, isBase64: false })),
+  ];
+  allSrcs.forEach((item, i) => {
+    setTimeout(() => autoSaveImage(item, i), i * 400);
+  });
+}
+
+const LOCAL_SERVER = 'http://localhost:8765';
+
+async function autoSaveImage(item, idx) {
+  try {
+    const body = item.isBase64
+      ? { data: item.data, idx }
+      : { url: item.url, idx };
+    const r = await fetch(`${LOCAL_SERVER}/save-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await r.json();
+    if (!json.ok) throw new Error(json.error || '保存失败');
+  } catch (e) {
+    showToast(`图片保存失败: ${e.message}（请确保 server.py 正在运行）`);
+  }
+}
+
+function renderErrorMsg(err) {
+  document.getElementById('loadingMsg')?.remove();
+  document.getElementById('emptyState')?.remove();
+  const chatArea = document.getElementById('chatArea');
+  const errId = 'err_' + Date.now();
+  const detail = err?.message || String(err);
+  chatArea.insertAdjacentHTML('beforeend', `
+    <div class="msg model" id="${errId}">
+      <div class="msg-header">
+        <div class="msg-avatar" style="background:var(--red);color:#fff;">!</div>
+        <span style="color:var(--red);">生成失败</span>
+        <button class="btn btn-ghost" style="margin-left:auto;font-size:11px;padding:3px 8px;"
+          onclick="copyErr('${errId}')">复制日志</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;"
+          onclick="document.getElementById('${errId}').remove()">✕</button>
+      </div>
+      <div class="msg-body" style="border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06);">
+        <pre class="err-detail" id="${errId}_text" style="white-space:pre-wrap;word-break:break-all;font-size:12px;font-family:monospace;color:var(--red);user-select:text;">${escapeHtml(detail)}</pre>
+      </div>
+    </div>
+  `);
+  scrollBottom();
+}
+
+function copyErr(errId) {
+  const text = document.getElementById(errId + '_text')?.textContent || '';
+  navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板', 'success'));
 }
 
 function toggleThought(id) {
@@ -992,28 +1049,27 @@ function closeLightbox(e) {
   }
 }
 
-function downloadImg(imgId) {
+async function downloadImg(imgId) {
   const img = document.getElementById(imgId);
   const src = img.src;
-  if (src.startsWith('data:')) {
-    // base64 — direct download
-    const a = document.createElement('a');
-    a.href = src;
-    a.download = `nanobanana_${Date.now()}.png`;
-    a.click();
-  } else {
-    // Remote URL — fetch as blob to force download, fallback to new tab
-    fetch(src)
-      .then(r => r.blob())
-      .then(blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `nanobanana_${Date.now()}.png`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      })
-      .catch(() => window.open(src, '_blank'));
+  const isBase64 = src.startsWith('data:');
+  const item = isBase64
+    ? { isBase64: true, data: src.split(',')[1], mime: src.match(/^data:([^;]+)/)?.[1] || 'image/png' }
+    : { isBase64: false, url: src };
+  try {
+    const body = item.isBase64
+      ? { data: item.data, idx: 0 }
+      : { url: item.url, idx: 0 };
+    const r = await fetch(`${LOCAL_SERVER}/save-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await r.json();
+    if (json.ok) showToast(`已保存: ${json.filename}`, 'success');
+    else throw new Error(json.error || '保存失败');
+  } catch (e) {
+    showToast(`保存失败: ${e.message}（请确保 server.py 正在运行）`);
   }
 }
 
@@ -1157,10 +1213,8 @@ async function generate() {
     renderUploadPreviews();
 
   } catch (err) {
-    document.getElementById('loadingMsg')?.remove();
-    // Remove last user turn from history on error
     conversationHistory.pop();
-    showToast('生成失败: ' + err.message);
+    renderErrorMsg(err);
     setLoading(false);
     return;
   }
@@ -1206,9 +1260,8 @@ async function quickSend() {
     renderModelMsg(parts, model);
 
   } catch (err) {
-    document.getElementById('loadingMsg')?.remove();
     conversationHistory.pop();
-    showToast('生成失败: ' + err.message);
+    renderErrorMsg(err);
     setLoading(false);
     return;
   }
