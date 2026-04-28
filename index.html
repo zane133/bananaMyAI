@@ -537,7 +537,18 @@
       <input type="text" id="baseUrlInput" placeholder="Base URL，如 https://newapi.aiopus.org" autocomplete="off" />
       <input type="password" id="apiKeyInput" placeholder="API Key…" autocomplete="off" />
       <button class="btn btn-ghost" id="saveKeyBtn" onclick="saveKey()">保存</button>
+      <button class="btn btn-ghost" onclick="toggleImportBox()" title="粘贴 JSON 配置导入">导入</button>
     </div>
+  </div>
+  <!-- Import config box -->
+  <div id="importBox" style="display:none;" class="header-row">
+    <input type="text" id="importInput"
+      placeholder='粘贴配置 JSON，如 {"_type":"newapi_channel_conn","key":"sk-...","url":"https://..."}'
+      style="flex:1;background:var(--surface2);border:1px solid var(--banana);border-radius:var(--radius-sm);color:var(--text);padding:6px 10px;font-size:13px;outline:none;font-family:monospace;"
+      oninput="tryAutoImport(this.value)"
+    />
+    <button class="btn btn-primary" onclick="doImport()" style="white-space:nowrap;">应用</button>
+    <button class="btn btn-ghost" onclick="toggleImportBox()">✕</button>
   </div>
   <!-- Row 2: Model + actions -->
   <div class="header-row">
@@ -714,6 +725,60 @@ function saveKey() {
   if (u) localStorage.setItem('nb_base_url', u);
   else localStorage.removeItem('nb_base_url');
   showToast('配置已保存', 'success');
+}
+
+/* ───────────────────────────── JSON Config Import ───────────────────────────── */
+function toggleImportBox() {
+  const box = document.getElementById('importBox');
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'flex';
+  if (!visible) {
+    document.getElementById('importInput').focus();
+    document.getElementById('importInput').value = '';
+  }
+}
+
+function parseConfigJson(raw) {
+  try {
+    const obj = JSON.parse(raw.trim());
+    const key = obj.key || obj.api_key || obj.apiKey || '';
+    const url = (obj.url || obj.base_url || obj.baseUrl || '').replace(/\/$/, '');
+    if (!key && !url) return null;
+    return { key, url };
+  } catch {
+    return null;
+  }
+}
+
+function tryAutoImport(val) {
+  // Auto-apply as soon as valid JSON is detected
+  if (val.trim().startsWith('{') && val.trim().endsWith('}')) {
+    const cfg = parseConfigJson(val);
+    if (cfg) applyConfig(cfg, false);
+  }
+}
+
+function doImport() {
+  const val = document.getElementById('importInput').value;
+  const cfg = parseConfigJson(val);
+  if (!cfg) { showToast('无法解析 JSON，请检查格式'); return; }
+  applyConfig(cfg, true);
+}
+
+function applyConfig(cfg, closeBox) {
+  if (cfg.url) document.getElementById('baseUrlInput').value = cfg.url;
+  if (cfg.key) document.getElementById('apiKeyInput').value = cfg.key;
+  // Persist without triggering its own toast
+  const k = document.getElementById('apiKeyInput').value.trim();
+  const u = document.getElementById('baseUrlInput').value.trim().replace(/\/$/, '');
+  if (k) localStorage.setItem('nb_api_key', k);
+  if (u) localStorage.setItem('nb_base_url', u);
+  else localStorage.removeItem('nb_base_url');
+  if (closeBox) {
+    document.getElementById('importBox').style.display = 'none';
+    document.getElementById('importInput').value = '';
+  }
+  showToast('配置已导入并保存', 'success');
 }
 
 function getApiKey() {
@@ -986,8 +1051,11 @@ async function autoSaveImage(item, idx) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const json = await r.json();
-    if (!json.ok) throw new Error(json.error || '保存失败');
+    if (!r.ok) {
+      const json = await r.json().catch(() => ({}));
+      throw new Error(json.error || `HTTP ${r.status}`);
+    }
+    // 保存成功，不需要解析响应体
   } catch (e) {
     showToast(`图片保存失败: ${e.message}（请确保 server.py 正在运行）`);
   }
@@ -1065,9 +1133,12 @@ async function downloadImg(imgId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const json = await r.json();
-    if (json.ok) showToast(`已保存: ${json.filename}`, 'success');
-    else throw new Error(json.error || '保存失败');
+    if (!r.ok) {
+      const json = await r.json().catch(() => ({}));
+      throw new Error(json.error || `HTTP ${r.status}`);
+    }
+    const json = await r.json().catch(() => ({}));
+    showToast(json.filename ? `已保存: ${json.filename}` : '已保存到本地', 'success');
   } catch (e) {
     showToast(`保存失败: ${e.message}（请确保 server.py 正在运行）`);
   }
@@ -1085,7 +1156,25 @@ function useAsReference(imgId) {
 }
 
 /* ───────────────────────────── Build Request ───────────────────────────── */
-function buildRequest(promptText, refImages) {
+// Fetch a remote URL and return base64 string + mimeType
+async function urlToBase64(url) {
+  const r = await fetch(url);
+  const blob = await r.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      resolve({
+        data: dataUrl.split(',')[1],
+        mimeType: blob.type || 'image/png',
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function buildRequest(promptText, refImages) {
   const model = document.getElementById('modelSelect').value;
   const aspectRatio = document.getElementById('aspectRatio').value;
   const resolution = document.getElementById('resolution').value;
@@ -1095,17 +1184,25 @@ function buildRequest(promptText, refImages) {
   const useImageSearch = document.getElementById('useImageSearch').checked;
   const imageOnly = document.getElementById('imageOnly').checked;
 
-  // Build parts for this turn
+  // Build parts for this turn — resolve URL images to base64 first
   const userParts = [];
   if (promptText) userParts.push({ text: promptText });
-  refImages.forEach(img => {
-    userParts.push({
-      inlineData: {
-        mimeType: img.mimeType,
-        data: dataUrlToBase64(img.dataUrl)
+  for (const img of refImages) {
+    let data, mimeType;
+    if (img.dataUrl.startsWith('data:')) {
+      data = dataUrlToBase64(img.dataUrl);
+      mimeType = img.mimeType;
+    } else {
+      // URL-based image (e.g. generated by third-party API) — fetch & convert
+      try {
+        ({ data, mimeType } = await urlToBase64(img.dataUrl));
+      } catch {
+        showToast(`参考图片加载失败，已跳过: ${img.name}`);
+        continue;
       }
-    });
-  });
+    }
+    userParts.push({ inlineData: { mimeType, data } });
+  }
 
   // Add to history
   conversationHistory.push({ role: 'user', parts: userParts });
@@ -1188,7 +1285,7 @@ async function generate() {
   showLoadingMsg();
 
   try {
-    const { model, body } = buildRequest(promptText, refImages);
+    const { model, body } = await buildRequest(promptText, refImages);
     const data = await callApi(model, body);
 
     const candidate = data?.candidates?.[0];
@@ -1244,7 +1341,7 @@ async function quickSend() {
 
   try {
     // Use current settings but with quick prompt text
-    const { model, body } = buildRequest(text, []);
+    const { model, body } = await buildRequest(text, []);
     const data = await callApi(model, body);
 
     const candidate = data?.candidates?.[0];

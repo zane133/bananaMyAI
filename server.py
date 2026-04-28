@@ -21,7 +21,6 @@ SAVE_DIR = os.path.dirname(os.path.abspath(__file__))
 class Handler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
-        self._cors()
         self.send_response(204)
         self.end_headers()
 
@@ -58,7 +57,6 @@ class Handler(SimpleHTTPRequestHandler):
                 else:
                     raise ValueError('请求体中缺少 data 或 url 字段')
 
-                self._cors()
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
@@ -70,13 +68,11 @@ class Handler(SimpleHTTPRequestHandler):
 
             except Exception as e:
                 print(f"  ❌ 保存失败: {e}")
-                self._cors()
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({'ok': False, 'error': str(e)}).encode())
         else:
-            self._cors()
             self.send_response(404)
             self.end_headers()
 
