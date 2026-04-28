@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🍌 Nano Banana Studio</title>
+  <style>
+    :root {
+      --banana: #FFE135;
+      --banana-dark: #F5C518;
+      --banana-deeper: #D4A017;
+      --bg: #0F0F11;
+      --surface: #1A1A1F;
+      --surface2: #23232A;
+      --surface3: #2D2D36;
+      --border: #3A3A46;
+      --text: #F0F0F5;
+      --text-muted: #888897;
+      --accent: #FFE135;
+      --green: #4ADE80;
+      --red: #F87171;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--banana);
+      white-space: nowrap;
+      margin-right: 4px;
+    }
+    .logo span { font-size: 20px; }
+
+    .api-key-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+    .api-key-wrap input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .2s;
+      min-width: 0;
+    }
+    .api-key-wrap input:focus { border-color: var(--banana); }
+    .api-key-wrap input::placeholder { color: var(--text-muted); }
+    #baseUrlInput { flex: 0 0 200px; }
+    #apiKeyInput  { flex: 1; }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+    select:focus { border-color: var(--banana); }
+    select option { background: var(--surface2); }
+
+    .btn {
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--banana);
+      color: #111;
+    }
+    .btn-primary:hover { background: var(--banana-dark); }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-primary:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-ghost {
+      background: var(--surface3);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--banana); color: var(--banana); }
+
+    /* ── Main Layout ── */
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left Panel ── */
+    .left-panel {
+      width: 320px;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      overflow-y: auto;
+    }
+
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-section:last-child { border-bottom: none; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      line-height: 1.5;
+      transition: border-color .2s;
+    }
+    textarea:focus { border-color: var(--banana); }
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* Upload area */
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+    }
+    .upload-area:hover { border-color: var(--banana); background: rgba(255,225,53,.04); }
+    .upload-area.has-image { border-style: solid; border-color: var(--banana-dark); }
+    .upload-area input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-area .upload-icon { font-size: 24px; margin-bottom: 4px; }
+    .upload-area .upload-text { font-size: 12px; color: var(--text-muted); }
+    .upload-preview {
+      width: 100%;
+      max-height: 120px;
+      object-fit: contain;
+      border-radius: 6px;
+      display: none;
+    }
+    .upload-preview.visible { display: block; }
+
+    /* Param grid */
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .param-item label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .param-item select,
+    .param-item input[type=range] { width: 100%; }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .toggle-row:last-child { margin-bottom: 0; }
+    .toggle-label { font-size: 13px; }
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface3);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: .2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; top: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: .2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--banana); }
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(16px);
+      background: #111;
+    }
+
+    /* Generate button */
+    .generate-btn {
+      margin: 12px 16px 16px;
+      width: calc(100% - 32px);
+      padding: 12px;
+      font-size: 15px;
+      border-radius: var(--radius);
+    }
+
+    /* ── Right Panel: Chat ── */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .empty-state .big-emoji { font-size: 64px; }
+    .empty-state h2 { font-size: 22px; color: var(--text); }
+    .empty-state p { font-size: 14px; max-width: 380px; line-height: 1.6; }
+
+    /* Chat messages */
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .msg-avatar {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .msg.user .msg-avatar { background: var(--banana); color: #111; }
+    .msg.model .msg-avatar { background: var(--surface3); }
+
+    .msg-body {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      border: 1px solid var(--border);
+    }
+    .msg.user .msg-body { background: rgba(255,225,53,.07); border-color: rgba(255,225,53,.2); }
+
+    .msg-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .msg-img-wrap {
+      position: relative;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .msg-img-wrap img {
+      display: block;
+      max-width: 480px;
+      max-height: 480px;
+      object-fit: contain;
+      cursor: pointer;
+    }
+    .msg-img-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.6);
+      padding: 6px 8px;
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .msg-img-wrap:hover .msg-img-overlay { opacity: 1; }
+    .img-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .img-btn-dl { background: var(--banana); color: #111; }
+    .img-btn-use { background: var(--surface3); color: var(--text); border: 1px solid var(--border); }
+
+    /* Thought toggle */
+    .thought-toggle {
+      font-size: 12px;
+      color: var(--banana);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      opacity: .8;
+    }
+    .thought-toggle:hover { opacity: 1; }
+    .thought-content {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--surface3);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      margin-top: 6px;
+      line-height: 1.5;
+      display: none;
+    }
+    .thought-content.visible { display: block; }
+
+    /* Loading */
+    .loading-msg {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .dots {
+      display: flex;
+      gap: 4px;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      background: var(--banana);
+      border-radius: 50%;
+      animation: bounce .9s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: .15s; }
+    .dot:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(.8); opacity: .6; }
+      40% { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* Bottom bar */
+    .bottom-bar {
+      padding: 10px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .bottom-bar textarea {
+      flex: 1;
+      min-height: 38px;
+      max-height: 120px;
+      resize: none;
+      padding: 8px 12px;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .lightbox.visible { display: flex; }
+    .lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: var(--radius);
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 16px; right: 20px;
+      font-size: 28px;
+      cursor: pointer;
+      color: #fff;
+      line-height: 1;
+    }
+
+    /* Error toast */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #3a1a1a;
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+      z-index: 99999;
+      max-width: 480px;
+      text-align: center;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+
+    /* Upload previews in user message */
+    .msg-upload-img {
+      max-height: 80px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+    }
+
+    /* Model badge */
+    .model-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: rgba(255,225,53,.12);
+      color: var(--banana);
+      font-weight: 600;
+    }
+
+    @media (max-width: 700px) {
+      .left-panel { width: 260px; min-width: 220px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <!-- Row 1: Logo + API config -->
+  <div class="header-row">
+    <div class="logo"><span>🍌</span> Nano Banana Studio</div>
+    <div class="api-key-wrap">
+      <input type="text" id="baseUrlInput" placeholder="Base URL，如 https://newapi.aiopus.org" autocomplete="off" />
+      <input type="password" id="apiKeyInput" placeholder="API Key…" autocomplete="off" />
+      <button class="btn btn-ghost" id="saveKeyBtn" onclick="saveKey()">保存</button>
+    </div>
+  </div>
+  <!-- Row 2: Model + actions -->
+  <div class="header-row">
+    <select id="modelSelect" style="flex:1;max-width:320px;">
+      <option value="gemini-3.1-flash-image-preview">🍌 Nano Banana 2 (3.1 Flash)</option>
+      <option value="gemini-3-pro-image-preview">🍌 Nano Banana Pro (3 Pro)</option>
+      <option value="gemini-2.5-flash-image">🍌 Nano Banana (2.5 Flash)</option>
+    </select>
+    <button class="btn btn-ghost" onclick="clearHistory()">清空对话</button>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+  <!-- Left Panel -->
+  <div class="left-panel">
+
+    <!-- Prompt -->
+    <div class="panel-section">
+      <div class="section-title">提示词</div>
+      <textarea id="promptInput" rows="5" placeholder="描述你想生成的图片…&#10;&#10;例如：一个精美的香蕉造型蛋糕，放在高档餐厅里，背景是星空主题的天花板。"></textarea>
+    </div>
+
+    <!-- Reference images -->
+    <div class="panel-section">
+      <div class="section-title">参考图片（最多 14 张）</div>
+      <div class="upload-area" id="uploadArea">
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)" />
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-text">点击或拖拽上传参考图片</div>
+      </div>
+      <div id="uploadedPreviews" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+    </div>
+
+    <!-- Output Config -->
+    <div class="panel-section">
+      <div class="section-title">输出配置</div>
+      <div class="param-grid">
+        <div class="param-item">
+          <label>宽高比</label>
+          <select id="aspectRatio">
+            <option value="1:1">1:1 正方形</option>
+            <option value="16:9">16:9 横屏</option>
+            <option value="9:16">9:16 竖屏</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+            <option value="3:2">3:2</option>
+            <option value="2:3">2:3</option>
+            <option value="4:5">4:5</option>
+            <option value="5:4">5:4</option>
+            <option value="21:9">21:9 超宽</option>
+            <option value="4:1">4:1</option>
+            <option value="1:4">1:4</option>
+            <option value="8:1">8:1</option>
+            <option value="1:8">1:8</option>
+          </select>
+        </div>
+        <div class="param-item">
+          <label>分辨率</label>
+          <select id="resolution">
+            <option value="1K">1K（默认）</option>
+            <option value="2K">2K</option>
+            <option value="4K">4K</option>
+            <option value="512">512</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thinking -->
+    <div class="panel-section">
+      <div class="section-title">思考模式</div>
+      <div class="param-item" style="margin-bottom:10px;">
+        <label>思考等级</label>
+        <select id="thinkingLevel">
+          <option value="minimal">minimal（默认，低延迟）</option>
+          <option value="high">high（高质量）</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label" style="font-size:13px;">显示思考过程</span>
+        <label class="toggle">
+          <input type="checkbox" id="showThoughts" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Tools -->
+    <div class="panel-section">
+      <div class="section-title">工具</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Google 搜索 接地</span>
+        <label class="toggle">
+          <input type="checkbox" id="useSearch" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Google 图片搜索</span>
+        <label class="toggle">
+          <input type="checkbox" id="useImageSearch" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">仅输出图片</span>
+        <label class="toggle">
+          <input type="checkbox" id="imageOnly" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <!-- Chat area -->
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state" id="emptyState">
+        <div class="big-emoji">🍌</div>
+        <h2>Nano Banana Studio</h2>
+        <p>基于 Gemini API 的原生图片生成工具。在左侧填写提示词，点击生成按钮，即可创建或编辑图片。支持多轮对话迭代。</p>
+      </div>
+    </div>
+
+    <!-- Bottom quick input -->
+    <div class="bottom-bar">
+      <textarea id="quickPrompt" rows="1" placeholder="继续修改图片，输入指令后按 Enter 发送…" onkeydown="handleQuickKey(event)"></textarea>
+      <button class="btn btn-primary generate-btn" id="quickSendBtn" onclick="quickSend()" style="margin:0;width:auto;padding:9px 18px;font-size:14px;">
+        发送
+      </button>
+    </div>
+  </div>
+</main>
+
+<!-- Generate Button (inside left panel) -->
+<script>
+  // Insert generate button at end of left panel
+  document.querySelector('.left-panel').insertAdjacentHTML('beforeend', `
+    <button class="btn btn-primary generate-btn" id="generateBtn" onclick="generate()">
+      🍌 生成图片
+    </button>
+  `);
+</script>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+  <img id="lightboxImg" src="" alt="" />
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────────────────────────── State ───────────────────────────── */
+let conversationHistory = [];
+let uploadedImages = []; // [{dataUrl, mimeType, name}]
+let isLoading = false;
+
+/* ───────────────────────────── Init ───────────────────────────── */
+const savedKey = localStorage.getItem('nb_api_key') || '';
+if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
+
+const savedBaseUrl = localStorage.getItem('nb_base_url') || '';
+if (savedBaseUrl) document.getElementById('baseUrlInput').value = savedBaseUrl;
+
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  const u = document.getElementById('baseUrlInput').value.trim().replace(/\/$/, '');
+  if (k) localStorage.setItem('nb_api_key', k);
+  if (u) localStorage.setItem('nb_base_url', u);
+  else localStorage.removeItem('nb_base_url');
+  showToast('配置已保存', 'success');
+}
+
+function getApiKey() {
+  return document.getElementById('apiKeyInput').value.trim() || localStorage.getItem('nb_api_key') || '';
+}
+
+function getBaseUrl() {
+  const v = document.getElementById('baseUrlInput').value.trim().replace(/\/$/, '')
+         || localStorage.getItem('nb_base_url')
+         || 'https://generativelanguage.googleapis.com';
+  return v;
+}
+
+/* ───────────────────────────── File Upload ───────────────────────────── */
+function handleFiles(files) {
+  const MAX = 14;
+  const remaining = MAX - uploadedImages.length;
+  const toProcess = Array.from(files).slice(0, remaining);
+  if (toProcess.length === 0) { showToast('最多上传 14 张图片'); return; }
+  toProcess.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      uploadedImages.push({ dataUrl: e.target.result, mimeType: f.type, name: f.name });
+      renderUploadPreviews();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function renderUploadPreviews() {
+  const container = document.getElementById('uploadedPreviews');
+  container.innerHTML = '';
+  uploadedImages.forEach((img, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;';
+    const im = document.createElement('img');
+    im.src = img.dataUrl;
+    im.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);';
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.style.cssText = 'position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;padding:0;line-height:1;';
+    del.onclick = () => { uploadedImages.splice(i, 1); renderUploadPreviews(); };
+    wrap.appendChild(im); wrap.appendChild(del);
+    container.appendChild(wrap);
+  });
+  const area = document.getElementById('uploadArea');
+  area.classList.toggle('has-image', uploadedImages.length > 0);
+}
+
+/* ───────────────────────────── Toast ───────────────────────────── */
+let toastTimer;
+function showToast(msg, type = 'error') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'success' ? '#0f2a1a' : '#3a1a1a';
+  t.style.borderColor = type === 'success' ? 'var(--green)' : 'var(--red)';
+  t.style.color = type === 'success' ? 'var(--green)' : 'var(--red)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ───────────────────────────── Clear ───────────────────────────── */
+function clearHistory() {
+  conversationHistory = [];
+  uploadedImages = [];
+  renderUploadPreviews();
+  const chatArea = document.getElementById('chatArea');
+  chatArea.innerHTML = '';
+  chatArea.insertAdjacentHTML('beforeend', `
+    <div class="empty-state" id="emptyState">
+      <div class="big-emoji">🍌</div>
+      <h2>Nano Banana Studio</h2>
+      <p>基于 Gemini API 的原生图片生成工具。在左侧填写提示词，点击生成按钮，即可创建或编辑图片。支持多轮对话迭代。</p>
+    </div>
+  `);
+}
+
+/* ───────────────────────────── Helpers ───────────────────────────── */
+function dataUrlToBase64(dataUrl) {
+  return dataUrl.split(',')[1];
+}
+
+function setLoading(loading) {
+  isLoading = loading;
+  document.getElementById('generateBtn').disabled = loading;
+  document.getElementById('quickSendBtn').disabled = loading;
+  document.getElementById('generateBtn').textContent = loading ? '⏳ 生成中…' : '🍌 生成图片';
+  document.getElementById('quickSendBtn').textContent = loading ? '…' : '发送';
+}
+
+function scrollBottom() {
+  const ca = document.getElementById('chatArea');
+  ca.scrollTop = ca.scrollHeight;
+}
+
+function modelLabel(model) {
+  const map = {
+    'gemini-3.1-flash-image-preview': 'Nano Banana 2',
+    'gemini-3-pro-image-preview': 'Nano Banana Pro',
+    'gemini-2.5-flash-image': 'Nano Banana',
+  };
+  return map[model] || model;
+}
+
+/* ───────────────────────────── Render Messages ───────────────────────────── */
+function renderUserMsg(text, images) {
+  const chatArea = document.getElementById('chatArea');
+  document.getElementById('emptyState')?.remove();
+
+  const imgsHtml = images && images.length > 0
+    ? images.map(img => `<img class="msg-upload-img" src="${img.dataUrl}" alt="${img.name}" />`).join('')
+    : '';
+
+  chatArea.insertAdjacentHTML('beforeend', `
+    <div class="msg user">
+      <div class="msg-header">
+        <div class="msg-avatar">👤</div>
+        <span>你</span>
+      </div>
+      <div class="msg-body">
+        ${text ? `<div>${escapeHtml(text)}</div>` : ''}
+        ${imgsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:${text?'8':'0'}px;">${imgsHtml}</div>` : ''}
+      </div>
+    </div>
+  `);
+  scrollBottom();
+}
+
+function showLoadingMsg() {
+  const chatArea = document.getElementById('chatArea');
+  chatArea.insertAdjacentHTML('beforeend', `
+    <div class="loading-msg" id="loadingMsg">
+      <div class="dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <span>Nano Banana 正在思考中…</span>
+    </div>
+  `);
+  scrollBottom();
+}
+
+// Extract markdown image URLs from text: ![alt](url) or bare image URLs
+function extractUrlImages(text) {
+  const urls = [];
+  // Markdown: ![...](url)
+  const mdReg = /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g;
+  let m;
+  while ((m = mdReg.exec(text)) !== null) urls.push(m[1]);
+  // Bare image URL lines
+  const bareReg = /^(https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif))$/gim;
+  while ((m = bareReg.exec(text)) !== null) {
+    if (!urls.includes(m[1])) urls.push(m[1]);
+  }
+  return urls;
+}
+
+// Strip markdown image syntax and bare image URL lines from text
+function stripUrlImages(text) {
+  return text
+    .replace(/!\[[^\]]*\]\(https?:\/\/[^)\s]+\)/g, '')
+    .replace(/^https?:\/\/\S+\.(?:png|jpg|jpeg|webp|gif)\s*$/gim, '')
+    .trim();
+}
+
+function makeImgCardHtml(src, idx) {
+  const imgId = `img_${Date.now()}_${idx}`;
+  // Escape for use in attribute
+  const safeSrc = src.replace(/"/g, '&quot;');
+  return `
+    <div class="msg-img-wrap">
+      <img src="${safeSrc}" id="${imgId}" onclick="openLightbox('${imgId}')" alt="生成图片" loading="lazy" />
+      <div class="msg-img-overlay">
+        <button class="img-btn img-btn-dl" onclick="downloadImg('${imgId}')">⬇ 下载</button>
+        <button class="img-btn img-btn-use" onclick="useAsReference('${imgId}')">↩ 用作参考</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderModelMsg(parts, model) {
+  document.getElementById('loadingMsg')?.remove();
+  const chatArea = document.getElementById('chatArea');
+
+  let textParts = [], imgParts = [], thoughtParts = [], urlImgSrcs = [];
+  for (const p of parts) {
+    if (p.thought) {
+      if (p.text) thoughtParts.push({type:'text', content: p.text});
+      else if (p.inlineData) thoughtParts.push({type:'img', data: p.inlineData.data, mime: p.inlineData.mimeType});
+    } else {
+      if (p.inlineData) {
+        imgParts.push({data: p.inlineData.data, mime: p.inlineData.mimeType, sig: p.thoughtSignature});
+      } else if (p.text) {
+        // Check for URL-based images embedded in text (third-party API format)
+        const extracted = extractUrlImages(p.text);
+        extracted.forEach(u => urlImgSrcs.push(u));
+        const stripped = stripUrlImages(p.text);
+        if (stripped) textParts.push(stripped);
+      }
+    }
+  }
+
+  const thoughtId = 'thought_' + Date.now();
+
+  // Thought section
+  let thoughtHtml = '';
+  if (thoughtParts.length > 0) {
+    const thoughtContent = thoughtParts.map(t =>
+      t.type === 'text'
+        ? `<p>${escapeHtml(t.content)}</p>`
+        : `<img src="data:${t.mime};base64,${t.data}" style="max-width:100%;border-radius:4px;margin:4px 0;" />`
+    ).join('');
+    thoughtHtml = `
+      <div class="thought-toggle" onclick="toggleThought('${thoughtId}')">
+        <span id="${thoughtId}_arrow">▶</span> 查看思考过程
+      </div>
+      <div class="thought-content" id="${thoughtId}">${thoughtContent}</div>
+    `;
+  }
+
+  // Inline-data images (official API)
+  const inlineImgsHtml = imgParts.map((img, idx) =>
+    makeImgCardHtml(`data:${img.mime};base64,${img.data}`, idx)
+  ).join('');
+
+  // URL images (third-party API)
+  const urlImgsHtml = urlImgSrcs.map((src, idx) =>
+    makeImgCardHtml(src, imgParts.length + idx)
+  ).join('');
+
+  const allImgsHtml = inlineImgsHtml + urlImgsHtml;
+  const hasContent = textParts.length > 0 || allImgsHtml;
+
+  chatArea.insertAdjacentHTML('beforeend', `
+    <div class="msg model">
+      <div class="msg-header">
+        <div class="msg-avatar">🍌</div>
+        <span>Nano Banana</span>
+        <span class="model-badge">${modelLabel(model)}</span>
+      </div>
+      <div class="msg-body">
+        ${thoughtHtml}
+        ${textParts.length > 0 ? `<div style="white-space:pre-wrap;">${escapeHtml(textParts.join('\n'))}</div>` : ''}
+        ${allImgsHtml ? `<div class="msg-images">${allImgsHtml}</div>` : ''}
+        ${!hasContent ? '<span style="color:var(--text-muted)">（未生成内容，请检查提示词或模型配置）</span>' : ''}
+      </div>
+    </div>
+  `);
+  scrollBottom();
+}
+
+function toggleThought(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id + '_arrow');
+  el.classList.toggle('visible');
+  arrow.textContent = el.classList.contains('visible') ? '▼' : '▶';
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+/* ───────────────────────────── Image Actions ───────────────────────────── */
+function openLightbox(imgId) {
+  const img = document.getElementById(imgId);
+  document.getElementById('lightboxImg').src = img.src;
+  document.getElementById('lightbox').classList.add('visible');
+}
+function closeLightbox(e) {
+  if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+    document.getElementById('lightbox').classList.remove('visible');
+  }
+}
+
+function downloadImg(imgId) {
+  const img = document.getElementById(imgId);
+  const src = img.src;
+  if (src.startsWith('data:')) {
+    // base64 — direct download
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `nanobanana_${Date.now()}.png`;
+    a.click();
+  } else {
+    // Remote URL — fetch as blob to force download, fallback to new tab
+    fetch(src)
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nanobanana_${Date.now()}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      })
+      .catch(() => window.open(src, '_blank'));
+  }
+}
+
+function useAsReference(imgId) {
+  const img = document.getElementById(imgId);
+  // Extract base64 data
+  const src = img.src;
+  const mimeMatch = src.match(/^data:([^;]+);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+  uploadedImages.push({ dataUrl: src, mimeType: mime, name: `reference_${Date.now()}.png` });
+  renderUploadPreviews();
+  showToast('已添加为参考图片', 'success');
+}
+
+/* ───────────────────────────── Build Request ───────────────────────────── */
+function buildRequest(promptText, refImages) {
+  const model = document.getElementById('modelSelect').value;
+  const aspectRatio = document.getElementById('aspectRatio').value;
+  const resolution = document.getElementById('resolution').value;
+  const thinkingLevel = document.getElementById('thinkingLevel').value;
+  const showThoughts = document.getElementById('showThoughts').checked;
+  const useSearch = document.getElementById('useSearch').checked;
+  const useImageSearch = document.getElementById('useImageSearch').checked;
+  const imageOnly = document.getElementById('imageOnly').checked;
+
+  // Build parts for this turn
+  const userParts = [];
+  if (promptText) userParts.push({ text: promptText });
+  refImages.forEach(img => {
+    userParts.push({
+      inlineData: {
+        mimeType: img.mimeType,
+        data: dataUrlToBase64(img.dataUrl)
+      }
+    });
+  });
+
+  // Add to history
+  conversationHistory.push({ role: 'user', parts: userParts });
+
+  // Build config
+  const imageConfig = {};
+  if (aspectRatio) imageConfig.aspectRatio = aspectRatio;
+  if (model !== 'gemini-2.5-flash-image' && resolution) imageConfig.imageSize = resolution;
+
+  const generationConfig = {
+    responseModalities: imageOnly ? ['IMAGE'] : ['TEXT', 'IMAGE'],
+    imageConfig,
+  };
+
+  // Thinking config (only for flash models)
+  if (model !== 'gemini-3-pro-image-preview') {
+    generationConfig.thinkingConfig = {
+      thinkingLevel: thinkingLevel,
+      includeThoughts: showThoughts,
+    };
+  }
+
+  // Tools
+  const tools = [];
+  if (useSearch || useImageSearch) {
+    const googleSearch = {};
+    if (useImageSearch) {
+      googleSearch.searchTypes = {};
+      if (useSearch) googleSearch.searchTypes.webSearch = {};
+      googleSearch.searchTypes.imageSearch = {};
+    }
+    tools.push({ googleSearch });
+  }
+
+  const body = {
+    contents: conversationHistory,
+    generationConfig,
+  };
+  if (tools.length > 0) body.tools = tools;
+
+  return { model, body };
+}
+
+/* ───────────────────────────── API Call ───────────────────────────── */
+async function callApi(model, body) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('请先输入并保存 Gemini API Key');
+
+  const url = `${getBaseUrl()}/v1beta/models/${model}:generateContent`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+  }
+
+  return resp.json();
+}
+
+/* ───────────────────────────── Generate ───────────────────────────── */
+async function generate() {
+  if (isLoading) return;
+  const promptText = document.getElementById('promptInput').value.trim();
+  const refImages = [...uploadedImages];
+
+  if (!promptText && refImages.length === 0) {
+    showToast('请输入提示词或上传参考图片');
+    return;
+  }
+
+  setLoading(true);
+  renderUserMsg(promptText, refImages);
+  showLoadingMsg();
+
+  try {
+    const { model, body } = buildRequest(promptText, refImages);
+    const data = await callApi(model, body);
+
+    const candidate = data?.candidates?.[0];
+    if (!candidate) throw new Error('API 返回空响应');
+
+    const parts = candidate.content?.parts || [];
+
+    // Save model response to history (without thought parts for cleanliness)
+    const historyParts = parts
+      .filter(p => !p.thought)
+      .map(p => {
+        if (p.inlineData) return { inlineData: p.inlineData, thoughtSignature: p.thoughtSignature };
+        return p;
+      });
+    conversationHistory.push({ role: 'model', parts: historyParts });
+
+    renderModelMsg(parts, model);
+
+    // Clear prompt and uploaded images after generation
+    document.getElementById('promptInput').value = '';
+    uploadedImages = [];
+    renderUploadPreviews();
+
+  } catch (err) {
+    document.getElementById('loadingMsg')?.remove();
+    // Remove last user turn from history on error
+    conversationHistory.pop();
+    showToast('生成失败: ' + err.message);
+    setLoading(false);
+    return;
+  }
+
+  setLoading(false);
+}
+
+/* ───────────────────────────── Quick Send ───────────────────────────── */
+function handleQuickKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    quickSend();
+  }
+}
+
+async function quickSend() {
+  if (isLoading) return;
+  const input = document.getElementById('quickPrompt');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+
+  setLoading(true);
+  renderUserMsg(text, []);
+  showLoadingMsg();
+
+  try {
+    // Use current settings but with quick prompt text
+    const { model, body } = buildRequest(text, []);
+    const data = await callApi(model, body);
+
+    const candidate = data?.candidates?.[0];
+    if (!candidate) throw new Error('API 返回空响应');
+
+    const parts = candidate.content?.parts || [];
+    const historyParts = parts.filter(p => !p.thought).map(p => {
+      if (p.inlineData) return { inlineData: p.inlineData, thoughtSignature: p.thoughtSignature };
+      return p;
+    });
+    conversationHistory.push({ role: 'model', parts: historyParts });
+
+    renderModelMsg(parts, model);
+
+  } catch (err) {
+    document.getElementById('loadingMsg')?.remove();
+    conversationHistory.pop();
+    showToast('生成失败: ' + err.message);
+    setLoading(false);
+    return;
+  }
+
+  setLoading(false);
+}
+
+/* ───────────────────────────── Drag & Drop ───────────────────────────── */
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = 'var(--banana)'; });
+uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = ''; });
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.style.borderColor = '';
+  handleFiles(e.dataTransfer.files);
+});
+
+/* ───────────────────────────── Keyboard ───────────────────────────── */
+document.getElementById('apiKeyInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveKey();
+});
+document.getElementById('baseUrlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveKey();
+});
+
+// Auto resize quick prompt textarea
+document.getElementById('quickPrompt').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+</script>
+</body>
+</html>
